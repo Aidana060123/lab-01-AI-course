@@ -197,16 +197,32 @@ but never shown in the reply (176–342 tokens per answer on this corpus); a
 `stop_reason: max_tokens` means the answer was cut off, not shortened.
 
 **7. Haiku vs. Opus, cost and quality.**
-Do: run `python3 part2_measure.py --model haiku-4.5 --call`, rename the
-resulting `measurements.json`, then the same for `opus-5`. Price both with
-`python3 part3_cost.py --measurements <file>`.
-Hand in: the cost ratio, plus your own judgement of the Kazakh answer quality
-from each — this is hand-in question 3 above, made concrete.
+Do: before running anything, write down a pass/fail checklist for one answer.
+Start from the trap already built into the corpus: `COMPLAINT` (`texts.py`)
+claims "I have attached the contract and the statement," but nothing is
+attached, and `SYSTEM_PROMPT` says to answer only from provided documents —
+so a compliant answer must decline to explain why the rate changed, not
+invent a plausible-sounding reason. A minimum checklist: (1) declines to
+explain the rate change rather than fabricating a cause; (2) invents no
+number not present in the complaint (no rate, no account number, no date
+beyond March/August/twelve months); (3) answers entirely in the question's
+language; (4) names a concrete next step. Then run
+`python3 part2_measure.py --model haiku-4.5 --call | tee run-haiku.txt`, copy
+the resulting `measurements.json` aside — the next run overwrites it — then
+repeat for `opus-5`. Price both with
+`python3 part3_cost.py --measurements <file> --model <key>`.
+Hand in: the cost ratio, the checklist as written *before* the first run, and
+the pass/fail scorecard for both models across all three languages (six
+answers) — this is hand-in question 3 above, made concrete.
 Expect: haiku-4.5's list price is exactly 1/5th of opus-5's on both input and
 output (`prices.py`: $1/$5 vs. $5/$25), so the cost side is not the
-interesting number — the quality comparison is.
-Trap: a cost argument alone does not answer hand-in question 3; the lab
-explicitly asks for the quality trade-off too.
+interesting number — the quality comparison is. A fluent answer that
+fabricates a reason for the rate change fails the lab's own system prompt no
+matter how well it reads.
+Trap: a cost argument alone does not answer hand-in question 3 — the lab
+explicitly asks for the quality trade-off too. And a checklist written after
+reading the answers is not a checklist, it is rationalization — the same
+discipline Part 1's predict-before-you-measure rule exists to enforce.
 
 Keep any new corpus item semantically parallel across the three languages —
 `texts.py` says so directly — or the comparison measures translation length,
