@@ -95,6 +95,33 @@ One page.
    queue, and the cost and quality argument for it.
 4. One sentence naming a cost lever this lab did **not** use.
 
+## Extend it — task ideas
+
+For a follow-up assignment, roughly cheapest first.
+
+**No key, no network — edit `texts.py`:**
+- Add your own EN/RU/KK item (a contract clause, an NBK notice, a real
+  complaint) and predict its ratio before running Part 1.
+- Code-switched KK/RU in one sentence vs. the pure-language version.
+- Numbers and currency (₸, %, IBAN, dates) instead of prose.
+- Latin-script Kazakh vs. the same sentence in Cyrillic.
+
+**`count_tokens` only, effectively free — Part 2 without `--call`:**
+- The same content as JSON/a table instead of prose — measure the
+  structuring overhead.
+- Shorten or lengthen `system_prompt` and watch `request_tokens` move.
+
+**One real call, a few cents — Part 2/3:**
+- Implement the cost lever you named in your write-up (prompt caching on
+  `system_prompt` is the obvious one) and re-measure.
+- Cap the answer with "reply in one sentence" and compare output tokens
+  across languages.
+- The same complaint on Haiku vs. Opus — price and answer quality side by
+  side.
+
+Keep any new corpus item semantically parallel across the three languages,
+or the comparison measures translation length, not tokenization.
+
 ## Files
 
 | File | Needs a key | What it does |
