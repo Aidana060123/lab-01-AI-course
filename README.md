@@ -95,32 +95,122 @@ One page.
    queue, and the cost and quality argument for it.
 4. One sentence naming a cost lever this lab did **not** use.
 
-## Extend it — task ideas
+## Extension tasks
 
-For a follow-up assignment, roughly cheapest first.
+Each task names the exact edit, the exact command, what to hand in, what to
+expect, and the mistake that produces a plausible but wrong number. Numbers
+under "Expect" are from the reference run (`measurements.example.json`) or
+from running `part0_tokenizers.py` / `part1_offline.py` yourself — not
+invented.
 
-**No key, no network — edit `texts.py`:**
-- Add your own EN/RU/KK item (a contract clause, an NBK notice, a real
-  complaint) and predict its ratio before running Part 1.
-- Code-switched KK/RU in one sentence vs. the pure-language version.
-- Numbers and currency (₸, %, IBAN, dates) instead of prose.
-- Latin-script Kazakh vs. the same sentence in Cyrillic.
+Adding a corpus item needs no code change: `CORPUS` is walked automatically
+by Parts 0, 1 and 2's token-counting loop. But `part2_measure.py` hardcodes
+`CORPUS["system_prompt"]` and `CORPUS["complaint"]` for the priced request, so
+a new item is counted in Parts 0-2 but **never priced by Part 3**.
 
-**`count_tokens` only, effectively free — Part 2 without `--call`:**
-- The same content as JSON/a table instead of prose — measure the
-  structuring overhead.
-- Shorten or lengthen `system_prompt` and watch `request_tokens` move.
+### Core — no API key, everyone does these
 
-**One real call, a few cents — Part 2/3:**
-- Implement the cost lever you named in your write-up (prompt caching on
-  `system_prompt` is the obvious one) and re-measure.
-- Cap the answer with "reply in one sentence" and compare output tokens
-  across languages.
-- The same complaint on Haiku vs. Opus — price and answer quality side by
-  side.
+**1. Add your own corpus item.**
+Do: add a fourth key to `CORPUS` in `texts.py` with parallel EN/RU/KK text
+(a contract clause, an NBK notice, a real complaint). Run
+`python3 part0_tokenizers.py` and `python3 part1_offline.py`.
+Hand in: the KK/EN and RU/EN token ratios on both tokenizers.
+Expect: in the same neighbourhood as `complaint` — `o200k_base` ≈1.4–2.0×,
+`cl100k_base` ≈2.5–4.5×. Far outside that band usually means the three
+versions are not saying the same thing.
+Trap: don't expect it to show up in Part 3's cost tables — it can't, per the
+hardcoding above.
 
-Keep any new corpus item semantically parallel across the three languages,
-or the comparison measures translation length, not tokenization.
+**2. Locate the Kazakh premium.**
+Do: write two similar-length Kazakh sentences — one using only letters shared
+with Russian, one dense with ә ғ қ ң ө ұ ү һ і. Add both to `CORPUS`, run both
+scripts.
+Hand in: `bytes/char` from Part 1 and the token counts from Part 0 for both.
+Expect: `bytes/char` nearly identical for both (both Cyrillic, 2 bytes/letter
+either way — Part 1 shows RU and KK both around 1.83–1.88 regardless of which
+Kazakh-only letters appear). The token counts will not be identical:
+`cl100k_base` penalizes the Kazakh-specific letters much harder than
+`o200k_base` does. The cost lives in the tokenizer's merge table, not in the
+alphabet.
+Trap: don't conclude from `bytes/char` alone that the two sentences cost the
+same — that measure cannot see tokenizer behaviour at all.
+
+**3. Prose vs. JSON.**
+Do: re-express `complaint` as a JSON object (`{"opened": "March", ...}`) in
+all three languages, add it as a corpus item, run `part0_tokenizers.py`.
+Hand in: the token increase over prose, in absolute tokens, per language —
+predict the direction before running.
+Expect: JSON costs more in every language, but the *absolute* extra token
+count from braces/quotes/field names is roughly constant across languages
+(the punctuation and field names stay ASCII regardless of the language of the
+values) — so it inflates the EN ratio proportionally more than RU or KK,
+since EN starts from a smaller token count.
+Trap: don't compare percentages without checking the underlying absolute
+counts — a "smaller relative increase" for Kazakh is a division artifact if
+the raw token overhead is actually the same.
+
+### Advanced — extra credit, pick one
+
+**4. Make the system prompt cheaper.**
+Do: write two more `system_prompt` variants — a terser RU one, and an
+English system prompt paired with the RU/KK complaint (mixed-language
+request). Run `python3 part2_measure.py` (no `--call` — this step is free)
+for each and read the printed `request` row.
+Hand in: the new `request_tokens` for RU and KK against the baseline
+(en=145, ru=209, kk=317 in the reference run).
+Expect: `system_prompt` is already ~38–40% of every language's request in the
+reference run (system_prompt/request_tokens: 58/145 EN, 80/209 RU, 124/317
+KK) — trimming it is one of the largest single input-side levers available,
+proportionally bigger than anything translation quality can fix.
+Trap: never sum `system_prompt`'s and `complaint`'s standalone token counts
+to estimate the combined request — that double-counts per-call message
+framing; only `count_request_tokens`'s combined count (the `request` row) is
+correct.
+
+**5. Implement the cost lever this lab doesn't use.**
+Do: `prices.py` defines `BATCH_DISCOUNT` (0.50) and `CACHE_READ_FRACTION`
+(0.10 on opus-5/sonnet-5/haiku-4.5, 0.025 on fable-5.1) — neither is ever
+applied by `cost_usd`. Write a script that re-prices the KK annual bill from
+`part3_cost.py`, applying prompt caching to the `system_prompt` share of the
+input (`token_counts.system_prompt`, cached after the first call) and the
+`complaint` share at full price.
+Hand in: the re-priced annual figure next to the uncached one from Part 3.
+Expect: most of the saving comes from the system prompt being the repeated
+part of every call — the bigger `system_prompt`'s share of `request_tokens`
+(see Task 4), the bigger this lever's payoff.
+Trap: batch discount assumes asynchronous processing — say explicitly why it
+does not apply to a live support queue; and this model ignores the one-time
+cache-write cost, which real caching is not free of.
+
+**6. Shorten the answer, not the question.**
+Do: append "Answer in at most two sentences." to each `system_prompt`. Run
+`python3 part2_measure.py --call` and compare `output_tokens` to the
+reference run (en=955, ru=1226, kk=1337).
+Hand in: the new output token counts and the resulting cost change via
+`part3_cost.py --output-tokens <value>`.
+Expect: a large drop — output is priced at exactly 5× input on every model in
+`prices.py` (e.g. opus-5: $5/$25, haiku-4.5: $1/$5), so this lever moves the
+bill more per token saved than any input-side change.
+Trap: check `stop_reason` in the printed output before trusting the number —
+`claude-opus-5` runs adaptive thinking by default, billed as output tokens
+but never shown in the reply (176–342 tokens per answer on this corpus); a
+`stop_reason: max_tokens` means the answer was cut off, not shortened.
+
+**7. Haiku vs. Opus, cost and quality.**
+Do: run `python3 part2_measure.py --model haiku-4.5 --call`, rename the
+resulting `measurements.json`, then the same for `opus-5`. Price both with
+`python3 part3_cost.py --measurements <file>`.
+Hand in: the cost ratio, plus your own judgement of the Kazakh answer quality
+from each — this is hand-in question 3 above, made concrete.
+Expect: haiku-4.5's list price is exactly 1/5th of opus-5's on both input and
+output (`prices.py`: $1/$5 vs. $5/$25), so the cost side is not the
+interesting number — the quality comparison is.
+Trap: a cost argument alone does not answer hand-in question 3; the lab
+explicitly asks for the quality trade-off too.
+
+Keep any new corpus item semantically parallel across the three languages —
+`texts.py` says so directly — or the comparison measures translation length,
+not tokenization.
 
 ## Files
 
