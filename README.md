@@ -229,35 +229,3 @@ than no file. `measurements.example.json` **is** in the repository — a
 reference run from 2026-09-12, so Part 3 has something to work against
 before your own Part 2 run, or if the projector key is unavailable. Copy it
 to `measurements.json` to use it: `cp measurements.example.json measurements.json`.
-
-## Notes for the instructor
-
-- Part 2 runs once, on the projector. Hand `measurements.json` to the students
-  afterwards — without it Part 3 refuses to run, on purpose, rather than
-  inventing token counts.
-- `MAX_TOKENS` in `part2_measure.py` is 2048. It used to be 512, which was not
-  enough headroom once adaptive thinking is accounted for — thinking tokens
-  ran 175–345 per answer on this corpus, and 512 cut answers off mid-sentence
-  (`stop_reason: max_tokens`). Do not lower it back down without checking
-  `stop_reason` on every language first.
-- The API key must be **workspace-scoped** in the Console. An
-  organization-level key is rejected outright (400, missing
-  `anthropic-workspace-id`) before it spends anything.
-- `--call` makes three requests. At list price on `claude-opus-5` that is a
-  few US cents in total — in the reference run, 145–317 input tokens and
-  955–1,337 output tokens per language, so under $0.10 total even before any
-  volume discount.
-- Prices in `prices.py` were checked on 2026-09-12 against the source named in
-  the module docstring. Re-check before teaching; if they moved, the lab still
-  works, but the slide numbers will not match.
-- The Russian and Kazakh wordings in `texts.py` are a starting point. Replace
-  them with your own if you prefer — but keep the three versions semantically
-  parallel, or the comparison measures translation length instead of
-  tokenization.
-- `request_tokens` in `measurements.json` is a **combined** count (system
-  prompt + complaint, one `count_tokens` call) — not the sum of the two
-  items' standalone counts. Summing standalone counts double-counts each
-  message's per-call framing overhead (about 5 tokens out of 145 on the
-  English request, roughly 3%, proportionally larger on short texts). Part 3
-  reads `request_tokens` directly; it will refuse to run on an older
-  `measurements.json` that predates this field.
